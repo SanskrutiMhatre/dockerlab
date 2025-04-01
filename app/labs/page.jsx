@@ -1,31 +1,67 @@
 "use client"
-import { useState, useEffect } from "react";
-import Link from "next/link";
+import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
-export default function Labs() {
+const Lab = () => {
   const [labs, setLabs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
+  const BEARER_TOKEN = process.env.NEXT_PUBLIC_BEARER_TOKEN;
 
   useEffect(() => {
-    const storedLabs = JSON.parse(localStorage.getItem("labs")) || [];
-    setLabs(storedLabs);
-  }, []); // ✅ Added empty dependency array to prevent infinite loop
+    const fetchLabs = async () => {
+      try {
+        const response = await fetch('http://localhost:1337/api/labs', {
+          headers: {
+            'Authorization': `Bearer ${BEARER_TOKEN}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        const result = await response.json();
+        setLabs(result.data);
+      } catch (error) {
+        console.error('Error fetching labs:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <nav className="flex justify-between p-4 border-b">
-        <Link href="/labs" className="text-lg font-bold">Labs</Link>
-        <Link href="/admin-portal" className="text-lg font-bold">Admin Portal</Link>
-      </nav>
-      <h1 className="text-2xl font-bold mt-4">Labs</h1>
-      <ul>
-        {labs.map((lab, index) => (
-          <li key={index} className="p-4 border mt-2">
-            <a href={`/labs/${index}`} target="_blank" className="text-blue-500 underline">
-              {lab.subject}
-            </a>
-          </li>
-        ))}
-      </ul>
+    fetchLabs();
+  }, [BEARER_TOKEN]);
+
+  if (loading) return <div>Loading...</div>;
+
+  const Card = ({ children, className = '', ...props }) => (
+    <div 
+      className={`bg-white rounded-2xl shadow-md p-4 hover:shadow-xl transition-shadow duration-300 cursor-pointer ${className}`} 
+      {...props}
+    >
+      {children}
     </div>
   );
-}
+
+  const CardContent = ({ children }) => (
+    <div className="p-2">
+      {children}
+    </div>
+  );
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
+      {labs.map((lab) => (
+        <Card 
+          key={lab.id} 
+          onClick={() => router.push(`/labs/${lab.slug}`)}
+        >
+          <CardContent>
+            <h2 className="text-xl font-bold">{lab.Subject_Name}</h2>
+            <p className="text-gray-600">Semester: {lab.Semester}</p>
+            <p className="text-gray-500 text-sm">Note: {lab.Note}</p>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+};
+
+export default Lab;
